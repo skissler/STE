@@ -1,6 +1,6 @@
 ### Supplemental Data for
 
-# "Using symbolic transfer entropy to infer which age groups drive influenza transmission from influenza-like illness data"
+# Using symbolic transfer entropy to infer which age groups drive influenza transmission from influenza-like illness data
 
 ### S.M. Kissler, C. Viboud, B.T. Grenfell, and J.R. Gog
 
