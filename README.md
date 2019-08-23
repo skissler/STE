@@ -1,4 +1,8 @@
-# Supplemental Data for "Using symbolic transfer entropy to infer which age groups drive influenza transmission from influenza-like illness data", by S.M. Kissler, C. Viboud, B.T. Grenfell, and J.R. Gog
+### Supplemental Data for
+
+# "Using symbolic transfer entropy to infer which age groups drive influenza transmission from influenza-like illness data"
+
+### by S.M. Kissler, C. Viboud, B.T. Grenfell, and J.R. Gog
 
 These twelve data files entitled "band*.csv" provide the symbolized ILI time series for the 12 age groups from the SDI-IMS dataset using a symbolization length of m = 3 weeks. Each file contains 884 time series (one for each city) consisting of 494 symbols (3-week groupings) each. The symbols are represented as integers; with reference to Fig. S1, the mapping from integers to symbols is
 1: A
