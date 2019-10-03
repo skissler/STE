@@ -2,7 +2,7 @@
 
 # Using symbolic transfer entropy to infer which age groups drive influenza transmission from influenza-like illness data
 
-### S.M. Kissler, C. Viboud, B.T. Grenfell, and J.R. Gog
+### S.M. Kissler, C. Viboud, B.T. Grenfell, and J.R. Gog (https://doi.org/10.1101/19005710)
 
 This project contains the following files: 
 
