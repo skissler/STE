@@ -1,0 +1,3351 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[    132916,       3343]
+NotebookOptionsPosition[    130663,       3298]
+NotebookOutlinePosition[    131002,       3313]
+CellTagsIndexPosition[    130959,       3310]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Copyright information", "Title",
+ CellChangeTimes->{{3.77568351390552*^9, 
+  3.775683516936207*^9}},ExpressionUUID->"77133319-6da8-402e-87c0-\
+bad92763c49a"],
+
+Cell["\<\
+\[OpenCurlyDoubleQuote]STEcode.nb\[CloseCurlyDoubleQuote] provides they \
+functions necessary to reproduce the results from \
+\[OpenCurlyDoubleQuote]Symbolic transfer entropy reveals the age structure of \
+pandemic influenza transmission from high-volume influenza-like illness data\
+\[CloseCurlyDoubleQuote], by SM Kissler, C Viboud, BT Grenfell, and JR Gog. 
+
+Copyright (C) 2019, Stephen Kissler
+
+This program is free software: you can redistribute it and/or modify it under \
+the terms of the GNU General Public License as published by the Free Software \
+Foundation,  version 3.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of \
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General \
+Public License for more details.
+
+You should have received a copy of the GNU General Public License along with \
+this program. If not, see <http://www.gnu.org/licenses/>.\
+\>", "Text",
+ CellChangeTimes->{{3.7756835294634047`*^9, 3.775683656305478*^9}, {
+  3.7791041321431017`*^9, 
+  3.7791041370977*^9}},ExpressionUUID->"32fe3d9f-a3f3-4a1b-99cf-f7884f0b8a56"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["SIR epidemic simulator: ", "Title",
+ CellChangeTimes->{{3.775674698696266*^9, 3.7756747084266253`*^9}, {
+  3.775682892434897*^9, 3.7756828984684677`*^9}, {3.7756829579168777`*^9, 
+  3.775682965854684*^9}, {3.775682996358693*^9, 
+  3.7756829970308723`*^9}},ExpressionUUID->"c098a78a-3d61-4c3c-8437-\
+c6a22a8119ce"],
+
+Cell[TextData[{
+ StyleBox["SIRGillespie ",
+  FontWeight->"Bold"],
+ "simulates a SIR epidemic for ",
+ StyleBox["n",
+  FontSlant->"Italic"],
+ " age groups. \nInputs:\n\tS0: Array (length n) with the number of \
+susceptible individuals initially in each age group\n\tI0: Array (length n) \
+with the number of infected individuals initially in each age group\n\t\
+\[Beta]: Matrix (nxn) of transmission rates such that the ",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"i", ",", 
+    RowBox[{
+     SuperscriptBox["j", "th"], " ", "entry", " ", "is", " ", "the", " ", 
+     "transmission", " "}]}], TraditionalForm]],ExpressionUUID->
+  "90d50047-2fed-4ff9-a314-6615ea976830"],
+ "constant from group j to group i\n\t\[Gamma]: Scalar recovery rate, or \
+inverse of the infectious period\n\tmaxits: Maximum number of iterations to \
+run the algorithm\n\tmaxt: Maximum number of time steps to run the epidemic"
+}], "Text",
+ CellChangeTimes->{{3.775683688735108*^9, 3.775683776494402*^9}, {
+  3.775684180959177*^9, 
+  3.775684346567165*^9}},ExpressionUUID->"b3f27822-9e11-4663-a273-\
+f99ad9037459"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"SIRGillespie", "[", 
+   RowBox[{
+   "S0_", ",", "I0_", ",", "\[Beta]_", ",", "\[Gamma]_", ",", "maxits_", ",", 
+    "maxt_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "nclass", ",", "NN", ",", " ", "SS", ",", " ", "II", ",", "t", ",", 
+      "SSTransitions", ",", " ", "IITransitions", ",", " ", "infrates", ",", 
+      " ", "recrates", ",", " ", "totrate", ",", " ", "\[Tau]", ",", 
+      "ratelist", ",", " ", "cumratelist", ",", " ", "draw", ",", " ", 
+      "event", ",", " ", "SSnew", ",", " ", "IInew"}], "}"}], ",", 
+    "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    RowBox[{"(*", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"--", 
+        RowBox[{"-", " ", "Initialize"}]}], " ", "the", " ", 
+       RowBox[{"simulation", " ", "--"}]}], "-"}], " ", "*)"}], 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"Length", "[", "S0", "]"}], "\[NotEqual]", " ", 
+        RowBox[{"Length", "[", "I0", "]"}]}], ",", " ", 
+       RowBox[{
+        RowBox[{"Print", "[", "\"\<Error\>\"", "]"}], ";", " ", 
+        RowBox[{"Return", "[", "]"}]}]}], "]"}], ";", 
+     RowBox[{"(*", 
+      RowBox[{
+       RowBox[{"if", " ", "the", " ", "vectors", " ", 
+        RowBox[{"don", "'"}], "t", " ", "have", " ", "the", " ", "same", " ", 
+        "length"}], ",", " ", 
+       RowBox[{"and", " ", "so", " ", 
+        RowBox[{"don", "'"}], "t", " ", "specify", " ", "the", " ", "same", 
+        " ", "number", " ", "of", " ", "age", " ", "classes"}], ",", " ", 
+       RowBox[{"then", " ", "the", " ", "simulation", " ", 
+        RowBox[{"can", "'"}], "t", " ", "continue"}]}], "*)"}], 
+     "\[IndentingNewLine]", 
+     RowBox[{"nclass", " ", "=", " ", 
+      RowBox[{"Length", "[", "S0", "]"}]}], ";", 
+     RowBox[{"(*", 
+      RowBox[{
+      "specify", " ", "the", " ", "number", " ", "of", " ", "age", " ", 
+       "classes", " ", "there", " ", "are"}], "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"NN", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"Total", "[", "S0", "]"}], " ", "+", " ", 
+       RowBox[{"Total", "[", "I0", "]"}]}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{
+      "calculate", " ", "the", " ", "total", " ", "population", " ", "size"}],
+       "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"SS", " ", "=", " ", 
+      RowBox[{"{", "S0", "}"}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{
+      "initialize", " ", "an", " ", "array", " ", "of", " ", "susceptible", 
+       " ", "counts"}], "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"II", " ", "=", " ", 
+      RowBox[{"{", "I0", "}"}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{
+      "initialize", " ", "an", " ", "array", " ", "of", " ", "infected", " ", 
+       "counts"}], "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"t", " ", "=", " ", 
+      RowBox[{"{", "0", "}"}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{
+      "initialize", " ", "an", " ", "array", " ", "to", " ", "store", " ", 
+       "time", " ", "points"}], "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"SSTransitions", " ", "=", " ", 
+      RowBox[{"Join", "[", 
+       RowBox[{
+        RowBox[{"DiagonalMatrix", "[", 
+         RowBox[{"ConstantArray", "[", 
+          RowBox[{
+           RowBox[{"-", "1"}], ",", " ", "nclass"}], "]"}], "]"}], ",", 
+        RowBox[{"ConstantArray", "[", 
+         RowBox[{
+          RowBox[{"ConstantArray", "[", 
+           RowBox[{"0", ",", "nclass"}], "]"}], ",", "nclass"}], "]"}]}], 
+       "]"}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{
+       RowBox[{
+       "Generate", " ", "an", " ", "array", " ", "of", " ", "the", " ", 
+        "possible", " ", "S"}], "-", 
+       RowBox[{"related", " ", "transitions", " ", 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"first", " ", "infection"}], ",", " ", 
+          RowBox[{"then", " ", "recovery"}]}], ")"}]}]}], "*)"}], 
+     "\[IndentingNewLine]", 
+     RowBox[{"IITransitions", " ", "=", " ", 
+      RowBox[{"Join", "[", 
+       RowBox[{
+        RowBox[{"DiagonalMatrix", "[", 
+         RowBox[{"ConstantArray", "[", 
+          RowBox[{"1", ",", " ", "nclass"}], "]"}], "]"}], ",", 
+        RowBox[{"DiagonalMatrix", "[", 
+         RowBox[{"ConstantArray", "[", 
+          RowBox[{
+           RowBox[{"-", "1"}], ",", " ", "nclass"}], "]"}], "]"}]}], "]"}]}], 
+     ";", 
+     RowBox[{"(*", 
+      RowBox[{
+       RowBox[{
+       "Generate", " ", "an", " ", "array", " ", "of", " ", "the", " ", 
+        "possible", " ", "I"}], "-", 
+       RowBox[{"related", " ", "transitions", " ", 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"first", " ", "infection"}], ",", " ", 
+          RowBox[{"then", " ", "recovery"}]}], ")"}]}]}], "*)"}], 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"(*", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"--", 
+         RowBox[{"-", " ", "Begin"}]}], " ", "iterating", " ", "through", " ",
+         "the", " ", 
+        RowBox[{"simulation", " ", "--"}]}], "-"}], " ", "*)"}], 
+     "\[IndentingNewLine]", 
+     RowBox[{"Do", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"infrates", " ", "=", " ", 
+         RowBox[{
+          FractionBox["1", "NN"], "*", 
+          RowBox[{
+           RowBox[{"DiagonalMatrix", "[", 
+            RowBox[{
+            "SS", "\[LeftDoubleBracket]", "it", "\[RightDoubleBracket]"}], 
+            "]"}], ".", "\[Beta]", ".", 
+           RowBox[{
+           "II", "\[LeftDoubleBracket]", "it", 
+            "\[RightDoubleBracket]"}]}]}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Calculate", " ", "infection", " ", "rates", " ", "for", " ", "each",
+           " ", "class"}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"recrates", " ", "=", " ", 
+         RowBox[{"\[Gamma]", "*", 
+          RowBox[{
+          "II", "\[LeftDoubleBracket]", "it", "\[RightDoubleBracket]"}]}]}], 
+        ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Calculate", " ", "recovery", " ", "rates", " ", "for", " ", "each", 
+          " ", "class"}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"totrate", " ", "=", " ", 
+         RowBox[{
+          RowBox[{"Total", "[", "infrates", "]"}], " ", "+", " ", 
+          RowBox[{"Total", "[", "recrates", "]"}]}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Calculate", " ", "the", " ", "total", " ", "rate", " ", "of", " ", 
+          "any", " ", "event", " ", "occurring"}], "*)"}], 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"--", 
+            RowBox[{"-", " ", "Calculate"}]}], " ", "the", " ", "time", " ", 
+           "to", " ", "next", " ", 
+           RowBox[{"transition", " ", "--"}]}], "-"}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"If", "[", 
+         RowBox[{
+          RowBox[{"totrate", "\[Equal]", "0"}], ",", " ", 
+          RowBox[{"(*", 
+           RowBox[{
+            RowBox[{
+            "If", " ", "the", " ", "event", " ", "rate", " ", "is", " ", 
+             "0"}], ",", " ", 
+            RowBox[{
+            "then", " ", "the", " ", "simulation", " ", "must", " ", "be", 
+             " ", "over"}]}], "*)"}], "\[IndentingNewLine]", 
+          RowBox[{"Return", "[", 
+           RowBox[{"{", 
+            RowBox[{"SS", ",", " ", "II", ",", "t"}], "}"}], "]"}], ",", " ", 
+          
+          RowBox[{"(*", 
+           RowBox[{"Return", " ", "the", " ", "output", " ", "vectors"}], 
+           "*)"}], "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"\[Tau]", " ", "=", " ", 
+            RowBox[{"RandomVariate", "[", 
+             RowBox[{"ExponentialDistribution", "[", "totrate", "]"}], 
+             "]"}]}], ";"}]}], " ", 
+         RowBox[{"(*", 
+          RowBox[{"Otherwise", ",", " ", 
+           RowBox[{"draw", " ", "the", " ", "next", " ", 
+            RowBox[{"event", "'"}], "s", " ", "time", " ", "from", " ", "an", 
+            " ", "exponential", " ", "distribution"}]}], "*)"}], 
+         "\[IndentingNewLine]", "]"}], ";", "\[IndentingNewLine]", 
+        "\[IndentingNewLine]", 
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"--", 
+            RowBox[{"-", " ", "Identify"}]}], " ", "the", " ", 
+           RowBox[{"transition", " ", "--"}]}], "-"}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"ratelist", " ", "=", " ", 
+         RowBox[{
+          RowBox[{"Join", "[", 
+           RowBox[{"infrates", ",", " ", "recrates"}], "]"}], "/", 
+          "totrate"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Calculate", " ", "the", " ", "probability", " ", "of", " ", "each", 
+          " ", "event", " ", "occurring"}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"cumratelist", " ", "=", " ", 
+         RowBox[{"Table", "[", 
+          RowBox[{
+           RowBox[{"Total", "[", 
+            RowBox[{"ratelist", "\[LeftDoubleBracket]", 
+             RowBox[{"Range", "[", 
+              RowBox[{"1", ",", "i"}], "]"}], "\[RightDoubleBracket]"}], 
+            "]"}], ",", 
+           RowBox[{"{", 
+            RowBox[{"i", ",", 
+             RowBox[{"Length", "[", "ratelist", "]"}]}], "}"}]}], "]"}]}], 
+        ";", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Turn", " ", "these", " ", "probabilities", " ", "into", " ", "a", 
+          " ", "vector", " ", "of", " ", "cumulative", " ", "probabilities"}],
+          "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"draw", " ", "=", " ", 
+         RowBox[{"RandomVariate", "[", 
+          RowBox[{"UniformDistribution", "[", "]"}], "]"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Draw", " ", "a", " ", "random", " ", "uniform", " ", "variable", 
+          " ", "for", " ", "choosing", " ", "the", " ", "event"}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"event", " ", "=", " ", 
+         RowBox[{
+          RowBox[{"Flatten", "[", 
+           RowBox[{"Position", "[", 
+            RowBox[{"cumratelist", ",", " ", 
+             RowBox[{"_", "?", 
+              RowBox[{"(", 
+               RowBox[{
+                RowBox[{"#", ">", "draw"}], "&"}], ")"}]}]}], "]"}], "]"}], 
+          "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}]}], ";", " ", 
+        
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{"Pick", " ", "the", " ", "event"}], ",", " ", 
+          RowBox[{
+          "based", " ", "on", " ", "the", " ", "cumulative", " ", 
+           "probability", " ", "distribution"}]}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"SSnew", " ", "=", " ", 
+         RowBox[{
+          RowBox[{
+          "SS", "\[LeftDoubleBracket]", "it", "\[RightDoubleBracket]"}], " ", 
+          "+", " ", 
+          RowBox[{
+          "SSTransitions", "\[LeftDoubleBracket]", "event", 
+           "\[RightDoubleBracket]"}]}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Update", " ", "the", " ", "number", " ", "of", " ", 
+          "susceptibles"}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"IInew", " ", "=", " ", 
+         RowBox[{
+          RowBox[{
+          "II", "\[LeftDoubleBracket]", "it", "\[RightDoubleBracket]"}], " ", 
+          "+", " ", 
+          RowBox[{
+          "IITransitions", "\[LeftDoubleBracket]", "event", 
+           "\[RightDoubleBracket]"}]}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Update", " ", "the", " ", "number", " ", "of", " ", "infecteds"}], 
+         "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"SS", " ", "=", " ", 
+         RowBox[{"Join", "[", 
+          RowBox[{"SS", ",", " ", 
+           RowBox[{"{", "SSnew", "}"}]}], "]"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{"Update", " ", 
+          RowBox[{"the", " ", "'"}], 
+          RowBox[{"susceptible", "'"}], " ", "output", " ", "vector"}], 
+         "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"II", " ", "=", " ", 
+         RowBox[{"Join", "[", 
+          RowBox[{"II", ",", " ", 
+           RowBox[{"{", "IInew", "}"}]}], "]"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{"Update", " ", 
+          RowBox[{"the", " ", "'"}], 
+          RowBox[{"infected", "'"}], " ", "output", " ", "vector"}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"t", " ", "=", " ", 
+         RowBox[{"Join", "[", 
+          RowBox[{"t", ",", 
+           RowBox[{"{", 
+            RowBox[{
+             RowBox[{
+             "t", "\[LeftDoubleBracket]", "it", "\[RightDoubleBracket]"}], 
+             "+", "\[Tau]"}], "}"}]}], "]"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{"Update", " ", 
+          RowBox[{"the", " ", "'"}], "event", " ", 
+          RowBox[{"times", "'"}], " ", "output", " ", "vector"}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"If", "[", 
+         RowBox[{
+          RowBox[{
+           RowBox[{
+            RowBox[{
+            "t", "\[LeftDoubleBracket]", "it", "\[RightDoubleBracket]"}], "+",
+             "\[Tau]"}], " ", ">", " ", "maxt"}], ",", " ", 
+          RowBox[{"Return", "[", 
+           RowBox[{"{", 
+            RowBox[{"SS", ",", " ", "II", ",", "t"}], "}"}], "]"}]}], "]"}], 
+        ";"}], " ", 
+       RowBox[{"(*", 
+        RowBox[{
+         RowBox[{"If", " ", 
+          RowBox[{"we", "'"}], "ve", " ", "exceeded", " ", "the", " ", 
+          "maximum", " ", "amount", " ", "of", " ", "time", " ", "allowed", 
+          " ", "for", " ", "the", " ", "simulation"}], ",", " ", 
+         RowBox[{"return", " ", "the", " ", "output", " ", "vectors"}]}], 
+        "*)"}], "\[IndentingNewLine]", ",", 
+       RowBox[{"{", 
+        RowBox[{"it", ",", " ", "maxits"}], "}"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"Return", "[", 
+      RowBox[{"{", 
+       RowBox[{"SS", ",", " ", "II", ",", "t"}], "}"}], "]"}], ";"}]}], " ", 
+   RowBox[{"(*", 
+    RowBox[{
+     RowBox[{"If", " ", 
+      RowBox[{"we", "'"}], "ve", " ", "reached", " ", "this", " ", "point"}], 
+     ",", " ", 
+     RowBox[{
+      RowBox[{"we", "'"}], "ve", " ", "reached", " ", "the", " ", "maximum", 
+      " ", "number", " ", "of", " ", 
+      RowBox[{"iterations", ".", " ", "Return"}], " ", "the", " ", 
+      RowBox[{"output", "."}]}]}], "*)"}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",
+ CellChangeTimes->CompressedData["
+1:eJxTTMoPSmViYGAQA2IQvcnmzmquJa8dK79GrgPRN770bALRuR/PbwHREt9+
+7QTRJkqWu0C0wbyvJ0B0auGXtyC6YuvTIwJAmqnP5zSIVjmefw9Ei0wr/gCi
+m+6/+AKiKx5M/Qqir7ddZBUE0mt0DNhBdNMqAyMQHZE60QzMz5hnDaIlXvL4
+g+h9t5QjwfxNH8G0jU1NEojmWVWVDKLfaotkguknzwtB9NTe5joQfW/BHjB9
+5m3XTBDNz80/C0R7tPlsBtFTWBdtAdFfpi55JgykL6xeAab5ZNh0dwHpN92h
+ZiD68hQdazDfxgdMP5CZ1NOt+Mbxzvr1YHr3Q48/ghpvHN8tjGMRAtJN+6Zx
+g+m6i1YgGgDWUbLw
+  "],
+ CellLabel->"In[15]:=",ExpressionUUID->"76e30102-0d0e-42c5-a609-2640695cf014"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["SIR demonstration:", "Title",
+ CellChangeTimes->{{3.779105283914011*^9, 
+  3.779105286678671*^9}},ExpressionUUID->"8d49634b-2f5e-483c-aaca-\
+094e1d2a0f36"],
+
+Cell["\<\
+Generate SIR simulations for two age classes strongly driven by age class 1 \
+(relative reproduction matrix {{4,1},{2,1}}). \
+\>", "Text",
+ CellChangeTimes->{{3.779105322563596*^9, 
+  3.7791053664713707`*^9}},ExpressionUUID->"b0d9014e-12c0-4ddf-b4e0-\
+c26fe007a3a2"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"k", " ", "=", " ", "1"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{
+    "Define", " ", "the", " ", "strength", " ", "of", " ", "driving", " ", 
+     "from", " ", "age", " ", "group", " ", "1"}], ",", " ", 
+    RowBox[{"between", " ", "0", " ", "and", " ", "1"}]}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"rrepmat", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"1", "+", 
+        RowBox[{"3", " ", "k"}]}], ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"1", " ", "+", " ", "k"}], ",", "1"}], "}"}]}], "}"}]}], ";", 
+  " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "define", " ", "the", " ", "relative", " ", "reproduction", " ", 
+    "matrix"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"R0", " ", "=", " ", "1.5"}], ";", "  ", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"fix", " ", 
+     RowBox[{"R0", ".", " ", 
+      RowBox[{"NOTE", "!"}]}], " ", "this", " ", "is", " ", "not", " ", "the",
+      " ", "intial", " ", "recovered"}], ",", " ", 
+    RowBox[{
+    "but", " ", "the", " ", "basic", " ", "reproduction", " ", "number"}]}], 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"\[Gamma]", " ", "=", " ", 
+   RowBox[{"N", "[", 
+    RowBox[{"1", "/", "7"}], "]"}]}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{"recovery", " ", "rate"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"maxits", " ", "=", " ", "5000"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "max", " ", "number", " ", "of", " ", "iterations", " ", "to", " ", "run", 
+    " ", "each", " ", "Gillespie", " ", "simulation"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"nepidemics", " ", "=", " ", "5"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{"fix", " ", "the", " ", "number", " ", "of", " ", 
+    RowBox[{"(", "successful", ")"}], " ", "outbreaks", " ", "to", " ", 
+    "run"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"binwidth", " ", "=", " ", "7"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "number", " ", "of", " ", "days", " ", "to", " ", "bin", " ", "gillespie", 
+    " ", "output", " ", "into", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"7", " ", "=", " ", 
+       RowBox[{"weekly", " ", "bins"}]}], ",", " ", 
+      RowBox[{"3.5", " ", "=", " ", 
+       RowBox[{"half", "-", 
+        RowBox[{"weekly", " ", "bins"}]}]}]}], ")"}]}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"noisefraction", " ", "=", " ", ".005"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "what", " ", "fraction", " ", "of", " ", "the", " ", "population", " ", 
+    "gets", " ", "random", " ", "respiratory", " ", "illness", " ", "each", 
+    " ", "week"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"maxt", " ", "=", " ", "175"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "longest", " ", "time", " ", "to", " ", "run", " ", "the", " ", "epidemic",
+     " ", "for"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"pvec", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{"0.5", ",", " ", "0.5"}], "}"}]}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "vector", " ", "of", " ", "the", " ", "fractional", " ", "percentages", 
+    " ", "of", " ", "the", " ", "population", " ", "made", " ", "up", " ", 
+    "by", " ", "each", " ", "age", " ", "group"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"nclasses", " ", "=", " ", "2"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"\[Beta]", " ", "=", " ", 
+   RowBox[{
+    FractionBox[
+     RowBox[{"2", " ", "\[Gamma]", " ", "R0"}], 
+     RowBox[{"2", " ", "+", " ", 
+      RowBox[{"3", " ", "k"}], " ", "+", " ", 
+      SqrtBox[
+       RowBox[{
+        RowBox[{"9", " ", 
+         SuperscriptBox["k", "2"]}], " ", "+", " ", 
+        RowBox[{"4", " ", "k"}], " ", "+", " ", "4"}]]}]], "*", 
+    RowBox[{
+     RowBox[{"DiagonalMatrix", "[", 
+      RowBox[{"1", "/", "pvec"}], "]"}], ".", "rrepmat"}]}]}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{"the", " ", "transmission", " ", "matrix"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"ngm", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"1", "/", "\[Gamma]"}], "*", 
+    RowBox[{
+     RowBox[{"DiagonalMatrix", "[", "pvec", "]"}], ".", "\[Beta]"}]}]}], ";", 
+  " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "calculate", " ", "the", " ", "next", " ", "generation", " ", "matrix", 
+    " ", "from", " ", "the", " ", "elements", " ", "defined", " ", "above"}], 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"IImat", " ", "=", " ", 
+   RowBox[{"ConstantArray", "[", 
+    RowBox[{"0", ",", 
+     RowBox[{"{", 
+      RowBox[{"nclasses", ",", "nepidemics", ",", 
+       RowBox[{"Floor", "[", 
+        RowBox[{"maxt", "/", "binwidth"}], "]"}]}], "}"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"successes", " ", "=", " ", "0"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "initialize", " ", "a", " ", "variable", " ", "to", " ", "store", " ", 
+    "how", " ", "many", " ", "epidemics", " ", "have", " ", "taken", " ", 
+    "off"}], "*)"}], "\n", 
+  RowBox[{"While", "[", 
+   RowBox[{
+    RowBox[{"successes", " ", "<", " ", "nepidemics"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"draw", " ", "=", " ", 
+      RowBox[{"RandomReal", "[", "]"}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{
+      "Draw", " ", "a", " ", "random", " ", "variable", " ", "to", " ", 
+       "determine", " ", "in", " ", "which", " ", "group", " ", "the", " ", 
+       "epidemic", " ", "starts"}], "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"draw", ">", "0.5"}], ",", " ", 
+       RowBox[{
+        RowBox[{"I0", " ", "=", " ", 
+         RowBox[{"{", 
+          RowBox[{"1", ",", "0"}], "}"}]}], ";", 
+        RowBox[{"S0", " ", "=", " ", 
+         RowBox[{"{", 
+          RowBox[{"499", ",", "500"}], "}"}]}]}], ",", 
+       RowBox[{"(*", "else", "*)"}], " ", 
+       RowBox[{
+        RowBox[{"I0", " ", "=", " ", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "1"}], "}"}]}], ";", " ", 
+        RowBox[{"S0", " ", "=", " ", 
+         RowBox[{"{", 
+          RowBox[{"500", ",", "499"}], "}"}]}]}]}], "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"SS", ",", " ", "II", ",", "t"}], "}"}], " ", "=", " ", 
+      RowBox[{"SIRGillespie", "[", 
+       RowBox[{
+       "S0", ",", "I0", ",", "\[Beta]", ",", "\[Gamma]", ",", "maxits", ",", 
+        " ", "maxt"}], "]"}]}], ";", 
+     RowBox[{"(*", 
+      RowBox[{"Simulate", " ", "the", " ", "epidemic"}], "*)"}], 
+     "\[IndentingNewLine]", 
+     RowBox[{"ncases", " ", "=", " ", 
+      RowBox[{"Total", "[", 
+       RowBox[{"Table", "[", 
+        RowBox[{
+         RowBox[{"Count", "[", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"Drop", "[", 
+             RowBox[{
+              RowBox[{"II", "\[LeftDoubleBracket]", 
+               RowBox[{"All", ",", "c"}], "\[RightDoubleBracket]"}], ",", 
+              "1"}], "]"}], " ", "-", " ", 
+            RowBox[{"Drop", "[", 
+             RowBox[{
+              RowBox[{"II", "\[LeftDoubleBracket]", 
+               RowBox[{"All", ",", "c"}], "\[RightDoubleBracket]"}], ",", 
+              RowBox[{"-", "1"}]}], "]"}]}], " ", ",", 
+           RowBox[{"_", "?", 
+            RowBox[{"(", 
+             RowBox[{
+              RowBox[{"#", ">", "0"}], "&"}], ")"}]}]}], "]"}], ",", 
+         RowBox[{"{", 
+          RowBox[{"c", ",", " ", "nclasses"}], "}"}]}], "]"}], "]"}]}], ";", 
+     " ", 
+     RowBox[{"(*", 
+      RowBox[{
+      "Count", " ", "the", " ", "total", " ", "number", " ", "of", " ", 
+       "infections"}], "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"ncases", ">", "100"}], ",", " ", 
+       RowBox[{"(*", 
+        RowBox[{
+        "if", " ", "the", " ", "epidemic", " ", "has", " ", "proceeded", " ", 
+         "for", " ", "sufficient", " ", "time"}], "*)"}], 
+       "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"successes", " ", "=", " ", 
+         RowBox[{"successes", " ", "+", " ", "1"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Record", " ", "the", " ", "epidemic", " ", "as", " ", "a", " ", 
+          "success"}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"binindices", " ", "=", " ", 
+         RowBox[{"Table", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"Flatten", "[", 
+            RowBox[{"Position", "[", 
+             RowBox[{"t", ",", 
+              RowBox[{"_", "?", 
+               RowBox[{"(", 
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"#", "\[GreaterEqual]", 
+                   RowBox[{"i", "*", "binwidth"}]}], " ", "&&", " ", 
+                  RowBox[{"#", "<", 
+                   RowBox[{
+                    RowBox[{"(", 
+                    RowBox[{"i", "+", "1"}], ")"}], "*", "binwidth"}]}]}], 
+                 "&"}], ")"}]}]}], "]"}], "]"}], ",", 
+           RowBox[{"{", 
+            RowBox[{"i", ",", "0", ",", 
+             RowBox[{"Ceiling", "[", 
+              RowBox[{
+               RowBox[{"(", 
+                RowBox[{"maxt", "-", "binwidth"}], ")"}], "/", "binwidth"}], 
+              "]"}]}], "}"}]}], "]"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Generate", " ", "a", " ", "set", " ", "of", " ", "indices", " ", 
+          "for", " ", "the", " ", "incidence", " ", "bins"}], "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"noise", " ", "=", " ", 
+         RowBox[{"Table", "[", 
+          RowBox[{
+           RowBox[{"Table", "[", 
+            RowBox[{
+             RowBox[{"RandomVariate", "[", 
+              RowBox[{"PoissonDistribution", "[", 
+               RowBox[{"noisefraction", "*", 
+                RowBox[{"(", 
+                 RowBox[{
+                  RowBox[{
+                  "S0", "\[LeftDoubleBracket]", "i", 
+                   "\[RightDoubleBracket]"}], "+", 
+                  RowBox[{
+                  "I0", "\[LeftDoubleBracket]", "i", 
+                   "\[RightDoubleBracket]"}]}], ")"}]}], "]"}], "]"}], ",", 
+             RowBox[{"{", 
+              RowBox[{"i", ",", "nclasses"}], "}"}]}], "]"}], ",", 
+           RowBox[{"{", 
+            RowBox[{"Length", "[", "binindices", "]"}], "}"}]}], "]"}]}], ";",
+         " ", 
+        RowBox[{"(*", 
+         RowBox[{
+         "Calculate", " ", "the", " ", "amount", " ", "of", " ", "noise", " ",
+           "in", " ", "each", " ", "bin"}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"binnedinfections", " ", "=", " ", 
+         RowBox[{
+          RowBox[{"Table", "[", "\[IndentingNewLine]", 
+           RowBox[{
+            RowBox[{"If", "[", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"Length", "[", 
+                RowBox[{"SS", "\[LeftDoubleBracket]", 
+                 RowBox[{
+                 "binindices", "\[LeftDoubleBracket]", "i", 
+                  "\[RightDoubleBracket]"}], "\[RightDoubleBracket]"}], "]"}],
+                ">", "0"}], ",", "\[IndentingNewLine]", 
+              RowBox[{
+               RowBox[{
+                RowBox[{"SS", "\[LeftDoubleBracket]", 
+                 RowBox[{
+                 "binindices", "\[LeftDoubleBracket]", "i", 
+                  "\[RightDoubleBracket]"}], "\[RightDoubleBracket]"}], 
+                "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}], " ", 
+               "-", " ", 
+               RowBox[{
+                RowBox[{"SS", "\[LeftDoubleBracket]", 
+                 RowBox[{
+                 "binindices", "\[LeftDoubleBracket]", "i", 
+                  "\[RightDoubleBracket]"}], "\[RightDoubleBracket]"}], 
+                "\[LeftDoubleBracket]", 
+                RowBox[{"-", "1"}], "\[RightDoubleBracket]"}]}], ",", 
+              "\[IndentingNewLine]", 
+              RowBox[{"ConstantArray", "[", 
+               RowBox[{"0", ",", 
+                RowBox[{"Length", "[", 
+                 RowBox[{
+                 "SS", "\[LeftDoubleBracket]", "1", "\[RightDoubleBracket]"}],
+                  "]"}]}], "]"}]}], "]"}], "\[IndentingNewLine]", ",", 
+            RowBox[{"{", 
+             RowBox[{"i", ",", 
+              RowBox[{"Length", "[", "binindices", "]"}]}], "}"}]}], "]"}], 
+          " ", "+", " ", "noise"}]}], ";", " ", 
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{"Bin", " ", "the", " ", "infections"}], ",", " ", 
+          RowBox[{"with", " ", "noise"}]}], "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"Do", "[", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{
+           RowBox[{
+            RowBox[{"IImat", "\[LeftDoubleBracket]", 
+             RowBox[{"i", ",", "successes"}], "\[RightDoubleBracket]"}], " ", 
+            "=", " ", 
+            RowBox[{"binnedinfections", "\[LeftDoubleBracket]", 
+             RowBox[{
+              RowBox[{"Range", "[", 
+               RowBox[{"1", ",", 
+                RowBox[{"Floor", "[", 
+                 RowBox[{"maxt", "/", "binwidth"}], "]"}]}], "]"}], ",", 
+              "i"}], "\[RightDoubleBracket]"}]}], ";"}], " ", 
+          RowBox[{"(*", 
+           RowBox[{
+           "Clean", " ", "up", " ", "the", " ", "infected", " ", "array"}], 
+           "*)"}], "\[IndentingNewLine]", ",", 
+          RowBox[{"{", 
+           RowBox[{"i", ",", "nclasses"}], "}"}]}], "]"}]}]}], 
+      "\[IndentingNewLine]", "]"}], ";"}]}], "\[IndentingNewLine]", "]"}], 
+  ";"}]}], "Input",
+ CellChangeTimes->{{3.779105378990346*^9, 3.779105472519438*^9}, {
+  3.7791055254488697`*^9, 3.7791056019157877`*^9}, {3.779105636644809*^9, 
+  3.779105788471078*^9}, {3.779105824718264*^9, 3.77910584537842*^9}},
+ CellLabel->"In[19]:=",ExpressionUUID->"0e55b690-6acf-4c30-9655-3ceced8141e2"],
+
+Cell["Plot the output:", "Text",
+ CellChangeTimes->{{3.779105876179747*^9, 
+  3.779105877763517*^9}},ExpressionUUID->"1ad5e5d0-e944-4fe6-8be8-\
+bed9014c9881"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Grid", "[", 
+  RowBox[{
+   RowBox[{"{", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"Join", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"Style", "[", 
+         RowBox[{
+          RowBox[{"Rotate", "[", 
+           RowBox[{
+           "\"\<Cases, Group \
+\!\(\*StyleBox[\"I\",FontSlant->\"Italic\"]\)\>\"", ",", 
+            RowBox[{"\[Pi]", "/", "2"}]}], "]"}], ",", 
+          RowBox[{"FontSize", "\[Rule]", "20"}], ",", 
+          RowBox[{"FontFamily", "\[Rule]", "\"\<Helvetica\>\""}]}], "]"}], 
+        "}"}], ",", 
+       RowBox[{"Table", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"ListLinePlot", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"IImat", "\[LeftDoubleBracket]", 
+            RowBox[{"1", ",", "i"}], "\[RightDoubleBracket]"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"Frame", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"True", ",", "True", ",", "False", ",", "False"}], 
+             "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameTicks", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{"i", ",", " ", 
+                  RowBox[{"Rotate", "[", 
+                   RowBox[{
+                    RowBox[{"ToString", "[", "i", "]"}], ",", 
+                    RowBox[{"\[Pi]", "/", "2"}]}], "]"}]}], "}"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "0", ",", "25", ",", "5"}], "}"}]}], "]"}],
+               ",", "Automatic"}], "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameLabel", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"\"\<Week\>\"", ",", " ", "None"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotStyle", "\[Rule]", "Black"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"BaseStyle", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"FontSize", "\[Rule]", "18"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotRange", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"0", ",", "100"}], "}"}]}], ",", " ", 
+           RowBox[{"AspectRatio", "\[Rule]", "Full"}]}], 
+          "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", ",", 
+         RowBox[{"{", 
+          RowBox[{"i", ",", "1", ",", "nepidemics"}], "}"}]}], "]"}]}], "]"}],
+      ",", "\[IndentingNewLine]", 
+     RowBox[{"Join", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"Style", "[", 
+         RowBox[{
+          RowBox[{"Rotate", "[", 
+           RowBox[{
+           "\"\<Cases, Group \
+\!\(\*StyleBox[\"J\",FontSlant->\"Italic\"]\)\>\"", ",", 
+            RowBox[{"\[Pi]", "/", "2"}]}], "]"}], ",", 
+          RowBox[{"FontSize", "\[Rule]", "20"}], ",", 
+          RowBox[{"FontFamily", "\[Rule]", "\"\<Helvetica\>\""}]}], "]"}], 
+        "}"}], ",", 
+       RowBox[{"Table", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"ListLinePlot", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"IImat", "\[LeftDoubleBracket]", 
+            RowBox[{"2", ",", "i"}], "\[RightDoubleBracket]"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"Frame", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"True", ",", "True", ",", "False", ",", "False"}], 
+             "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameTicks", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{"i", ",", " ", 
+                  RowBox[{"Rotate", "[", 
+                   RowBox[{
+                    RowBox[{"ToString", "[", "i", "]"}], ",", 
+                    RowBox[{"\[Pi]", "/", "2"}]}], "]"}]}], "}"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "0", ",", "25", ",", "5"}], "}"}]}], "]"}],
+               ",", "Automatic"}], "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameLabel", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"\"\<Week\>\"", ",", " ", "None"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotStyle", "\[Rule]", "Black"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"BaseStyle", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"FontSize", "\[Rule]", "18"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotRange", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"0", ",", "100"}], "}"}]}], ",", " ", 
+           RowBox[{"AspectRatio", "\[Rule]", "Full"}]}], 
+          "\[IndentingNewLine]", "]"}], ",", 
+         RowBox[{"{", 
+          RowBox[{"i", ",", "1", ",", "nepidemics"}], "}"}]}], "]"}]}], 
+      "]"}]}], "\[IndentingNewLine]", "}"}], ",", 
+   RowBox[{"Dividers", "\[Rule]", "All"}], ",", 
+   RowBox[{"Spacings", "\[Rule]", "1"}], ",", " ", 
+   RowBox[{"ItemSize", "\[Rule]", "Full"}]}], "]"}]], "Input",
+ CellLabel->"In[23]:=",ExpressionUUID->"ca1a963b-b505-4cad-844e-a388cd4ca66a"],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     StyleBox[
+      RotationBox["\<\"Cases, Group \\!\\(\\*StyleBox[\\\"I\\\",FontSlant->\\\
+\"Italic\\\"]\\)\"\>",
+       BoxRotation->1.5707963267948966`],
+      StripOnInput->False,
+      FontFamily->"Helvetica",
+      FontSize->20], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0kgNUAEpbQGkOKG0CpQUgdIMrlC8CoR0C
+oHwJqLwzlC8DpW2htAJU3ssB1V4zKK0CpQ2htBoarYGmTgvVXQw6aO7Wg9Iw
+fxmgqTdE4xuhqTeG0rBwMkGTN0WTh/kDZp45mjx6uFrC5QEskxtF
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0iANUAEorQWkOKK0DpQWgtJkDqj4TKC0B
+pW2gtAyEbnCH8hWgfBc0e9ygtApU3hHKV4PS9lBaA0pbQmktKG2A5k6YPj1U
+d8DVwdxpiMY3gtKwcDCG0rBwgPkTFg6mUBoWjujhYg4zDwos0OyD+UPAAQA8
+KxiS
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0ggNUAEoLQGkOKG2KJu4OpUWgtB+UloDQ
+DoFQvgyUdnZAsafBCcpXgtJmUFoFShtAaTUorQOlNdDs1UK1F64O5k49NH/A
+zIX52xDNPCMoDQPGaPpNYPJQ2hSNb4am3hzNPgs0+yzh7gcAjYcYLw==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7KEMB1RaAUpzQGk9KC0AoRscoHwRKN8NypeA
+0j5QWgZK+6OZ6wSllaC0GZRWgdLGUFoNSptAaQ00c7RQ3cGgg8ZHczeDAZSG
++dMQxocCIygfFi4wd8DCwQSNb4pmH8wfMPvM0dRboPEt4XwAqfAXfA==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0ggNUAEqrQGkOKG0ApQWgtDWUFoHSelBa
+AkobQmkZKG3rgGoPjK8EoRtc0ew1gdJqaHwNNFoLzV06ONylhOYPGB/mTph+
+IzTzjdHcDXMHTL8plIaFkxmaeeZo7rGA0rBwsoTLAwDNvBby
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}]},
+    {
+     StyleBox[
+      RotationBox["\<\"Cases, Group \\!\\(\\*StyleBox[\\\"J\\\",FontSlant->\\\
+\"Italic\\\"]\\)\"\>",
+       BoxRotation->1.5707963267948966`],
+      StripOnInput->False,
+      FontFamily->"Helvetica",
+      FontSize->20], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CE0hwNUAEprOaCKG0JpAShtCaVFIHSDM5Qv
+AaXdoLQMlLaF0gpQ2hRKK0FpcyitgqZPDUproNEwc2DuhNmrg+ZuPTS+AZSG
++dsQjW8E5cOAMYwPpU3Q1Jui8c3Q+DB/wcLNAs18WDhyOAAAAWsZ+A==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CE0hwNUAI2GiQug0TpQWgRKW0JpCShtDqVl
+IHSDC5SvAKXtobQSmnoVNPPUoLQVlNaA0sZQWgtK66G5SwFNHMY3QHOnIZSG
++csISsP8D7MHBkygfFi4maKpN4PSsHAzR5O3QLPPEs4HAIYRFtw=
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0igNUAEqLQGkOKC0BpQWgtDmaOntUdQ0u
+UL4MlO8E5Sug8ZWgtI4DqjvU0GhTKK2BRmuhmgs3B+ZuPVR3MBhAaZg/DdHk
+jdDkjaE0zN8mUBoWbjB3wewzg+mHAnM09RZo6i3h9gEAA7QYtg==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CE0hwNUAI2GictAaQEobQSlRaC0OZSWgNAN
+Tmj6YHwFNHklNP0qUNoSSqtBaWMorYFmrhaqvQw6qPYw6KH5wwDN3YZQGgZg
+/oKph9kL87cJTD2UNkXjm6HxzdH4Fmj2wfz5wR4AqEkWyA==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0hANUAEorQGkOKK0BpQWgtA6UFoHSSg6o
+5qhBaRkorYdmrh2aPmsorQKlHdDMgdkHc4cxlNZCMxfdXXpotAGaPwyhNMyf
+Rmj+gNkDM88ETd4UzX4zNPXmaOZboPEt4eYBAO1HFg8=
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}]}
+   },
+   AutoDelete->False,
+   GridBoxDividers->{"Columns" -> {{True}}, "Rows" -> {{True}}},
+   GridBoxItemSize->{"Columns" -> {{All}}, "Rows" -> {{All}}},
+   GridBoxSpacings->{"Columns" -> {{1}}}],
+  "Grid"]], "Output",
+ CellChangeTimes->{3.779105869696155*^9},
+ CellLabel->"Out[23]=",ExpressionUUID->"2742f159-1aed-4674-90e1-44ddf547619a"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Poisson epidemic simulator:", "Title",
+ CellChangeTimes->{{3.775674709688395*^9, 3.775674713324421*^9}, {
+  3.7756829042584057`*^9, 3.7756829098500013`*^9}, {3.775682973067457*^9, 
+  3.7756829951936073`*^9}},ExpressionUUID->"f88943a5-45a8-4aba-adaf-\
+100b2da5ddb1"],
+
+Cell[TextData[{
+ StyleBox["PoissonSim ",
+  FontWeight->"Bold"],
+ "simulates a Poisson-style epidemic for ",
+ StyleBox["n",
+  FontSlant->"Italic"],
+ " age groups. \nInputs:\n\tinitinf: Vector containing the initial number of \
+infecteds in each age group.\n\tgenlength: Generation interval of \
+transmission\n\tepilength: Length of time to run the outbreak\n\tchangepoint: \
+Time point at which transmission changes from being governed by NGMHigh to \
+NGMLow\n\tNGMHigh: The high-reproduction next-generation matrix\n\tNGMLow: \
+The low-reproduction next-generation matrix\n\tgensperbin: Number of \
+generations to put into each bin"
+}], "Text",
+ CellChangeTimes->{{3.779105992989375*^9, 3.779106002989846*^9}, {
+  3.779106041654385*^9, 3.779106146093095*^9}, {3.779106193678815*^9, 
+  3.779106205614585*^9}},ExpressionUUID->"64cd279b-c1c6-4a45-8a01-\
+930de3adfd80"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+   "Generate", " ", "a", " ", "function", " ", "to", " ", "easily", " ", 
+    "draw", " ", "Poisson", " ", "random", " ", "variables"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"RPoisson", "[", "\[Mu]_", "]"}], " ", ":=", " ", 
+    RowBox[{"If", "[", 
+     RowBox[{
+      RowBox[{"\[Mu]", ">", "0"}], ",", " ", 
+      RowBox[{"RandomVariate", "[", 
+       RowBox[{"PoissonDistribution", "[", "\[Mu]", "]"}], "]"}], ",", "0"}], 
+     "]"}]}], ";"}]}]], "Input",
+ CellChangeTimes->{{3.748264890410563*^9, 3.748264945383202*^9}, {
+  3.7791060153011627`*^9, 3.7791060263142843`*^9}},
+ CellLabel->"In[24]:=",ExpressionUUID->"cbe946ab-849e-4be9-b392-6ac31ff0be72"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"PoissonSim", "[", 
+   RowBox[{
+   "initinf_", ",", " ", "genlength_", ",", " ", "epilength_", ",", " ", 
+    "changepoint_", ",", " ", "NGMHigh_", ",", " ", "NGMLow_", ",", " ", 
+    "gensperbin_"}], "]"}], ":=", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"ngens", ",", " ", "ivec", ",", " ", "binvec"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"(*", " ", 
+     RowBox[{
+     "calculate", " ", "how", " ", "many", " ", "generations", " ", "are", 
+      " ", "in", " ", "the", " ", 
+      RowBox[{"outbreak", ":"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"ngens", " ", "=", " ", 
+      RowBox[{"Ceiling", "[", 
+       RowBox[{"epilength", "/", "genlength"}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"(*", " ", 
+      RowBox[{"initialize", " ", "vector", " ", "of", " ", 
+       RowBox[{"infecteds", ":"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"ivec", " ", "=", " ", 
+      RowBox[{"{", "initinf", "}"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", " ", 
+      RowBox[{"run", " ", "the", " ", "simulation"}], " ", "*)"}], 
+     "\[IndentingNewLine]", 
+     RowBox[{"Table", "[", 
+      RowBox[{
+       RowBox[{"ivec", " ", "=", " ", 
+        RowBox[{"Join", "[", 
+         RowBox[{"ivec", ",", " ", "\[IndentingNewLine]", 
+          RowBox[{"If", "[", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"it", "*", "genlength"}], "\[LessEqual]", 
+             "changepoint"}], ",", " ", 
+            RowBox[{"(*", 
+             RowBox[{
+              RowBox[{"if", " ", 
+               RowBox[{"we", "'"}], "re", " ", "before", " ", "the", " ", 
+               "changepoint"}], ","}], "*)"}], "\[IndentingNewLine]", 
+            RowBox[{"{", 
+             RowBox[{"RPoisson", "/@", 
+              RowBox[{"(", 
+               RowBox[{"NGMHigh", ".", 
+                RowBox[{"ivec", "\[LeftDoubleBracket]", 
+                 RowBox[{"-", "1"}], "\[RightDoubleBracket]"}]}], ")"}]}], 
+             "}"}], ",", " ", 
+            RowBox[{"(*", 
+             RowBox[{
+             "iterate", " ", "using", " ", "NGMHigh", " ", "x", " ", 
+              "previous", " ", "infected"}], "*)"}], "\[IndentingNewLine]", 
+            RowBox[{"{", 
+             RowBox[{"RPoisson", "/@", 
+              RowBox[{"(", 
+               RowBox[{"NGMLow", ".", 
+                RowBox[{"ivec", "\[LeftDoubleBracket]", 
+                 RowBox[{"-", "1"}], "\[RightDoubleBracket]"}]}], ")"}]}], 
+             "}"}]}], " ", 
+           RowBox[{"(*", 
+            RowBox[{"else", ",", " ", 
+             RowBox[{
+             "iterate", " ", "using", " ", "NGMLow", " ", "x", " ", 
+              "previous", " ", "infected"}]}], "*)"}], "\[IndentingNewLine]", 
+           "]"}]}], "\[IndentingNewLine]", "]"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{"it", ",", " ", "ngens"}], "}"}]}], "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"binvec", " ", "=", " ", 
+      RowBox[{"Total", "/@", 
+       RowBox[{"Partition", "[", 
+        RowBox[{"ivec", ",", "gensperbin"}], "]"}]}]}], ";", " ", 
+     RowBox[{"(*", 
+      RowBox[{"bin", " ", "the", " ", "observed", " ", "infections"}], "*)"}],
+      "\[IndentingNewLine]", 
+     RowBox[{"Return", "[", "binvec", "]"}], ";"}]}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input",
+ CellChangeTimes->{{3.748266450645074*^9, 3.748266615777513*^9}, {
+   3.748266843700007*^9, 3.748266879710061*^9}, {3.748266967969049*^9, 
+   3.748266970501363*^9}, {3.748267053722402*^9, 3.7482670682297583`*^9}, 
+   3.748267410968937*^9, {3.748267450482066*^9, 3.748267558699675*^9}},
+ CellLabel->"In[25]:=",ExpressionUUID->"f2c18685-a952-4c02-a2ef-393d6647889f"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Poisson demonstration:", "Title",
+ CellChangeTimes->{{3.77910616564288*^9, 
+  3.779106169298411*^9}},ExpressionUUID->"ed3480cd-a145-4ff2-a865-\
+678b4c773135"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"RHigh", " ", "=", " ", "1.5"}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "Set", " ", "the", " ", "high", " ", "effective", " ", "reproduction", " ",
+     "number"}], "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"RLow", " ", "=", "0.8"}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "Set", " ", "the", " ", "low", " ", "effective", " ", "reproduction", " ", 
+    "number"}], "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"ivecfull", " ", "=", " ", 
+    RowBox[{"{", "}"}]}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "Initialize", " ", "a", " ", "vector", " ", "for", " ", "the", " ", 
+    "simulated", " ", "output"}], "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"NGMstruct", "=", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"4", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "1"}], "}"}]}], "}"}]}], ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "Set", " ", "the", " ", "relative", " ", "reproduction", " ", "matrix"}], 
+   "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"NGMHigh", " ", "=", " ", 
+    RowBox[{"RHigh", "*", 
+     RowBox[{"N", "[", 
+      RowBox[{"NGMstruct", " ", "/", " ", 
+       RowBox[{"Max", "[", 
+        RowBox[{"Eigenvalues", "[", "NGMstruct", "]"}], "]"}]}], "]"}]}]}], 
+   ";"}], " ", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"Set", " ", 
+     RowBox[{"the", " ", "'"}], "high"}], "-", 
+    RowBox[{
+     RowBox[{"R", "'"}], " ", "NGM"}]}], "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"NGMLow", " ", "=", " ", 
+   RowBox[{"RLow", "*", 
+    RowBox[{"N", "[", 
+     RowBox[{"NGMstruct", " ", "/", " ", 
+      RowBox[{"Max", "[", 
+       RowBox[{"Eigenvalues", "[", "NGMstruct", "]"}], "]"}]}], "]"}]}]}], 
+  ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"Set", " ", 
+     RowBox[{"the", " ", "'"}], "low"}], "-", 
+    RowBox[{
+     RowBox[{"R", "'"}], " ", "NGM"}]}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"changepoint", " ", "=", " ", "28"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "number", " ", "of", " ", "generations", " ", "after", " ", "which", " ", 
+    "to", " ", "switch", " ", "to", " ", "the", " ", "RLow"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"epilength", " ", "=", " ", "175"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{"length", " ", "of", " ", "epidemic", " ", "in", " ", "days"}], 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"gensperbin", " ", "=", " ", "2"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{"number", " ", "of", " ", "generations", " ", "per", " ", "bin"}], 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"genlength", " ", "=", " ", "3.5"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "length", " ", "of", " ", "generation", " ", "interval", " ", "in", " ", 
+    "days"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"noiserate", " ", "=", "10"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{
+    "amount", " ", "of", " ", "noise", " ", "to", " ", "inject", " ", "into", 
+     " ", "each", " ", "category"}], ",", " ", 
+    RowBox[{"in", " ", "each", " ", "bin"}]}], "*)"}], "\[IndentingNewLine]", 
+  
+  RowBox[{"nepidemics", " ", "=", " ", "5"}], ";", " ", 
+  RowBox[{"(*", 
+   RowBox[{
+   "number", " ", "of", " ", "epidemics", " ", "per", " ", "STE", " ", 
+    "calculation"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", " ", 
+   RowBox[{"RUN", " ", "THE", " ", "EPIDEMIC", " ", "SIMULATION"}], " ", 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"While", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Length", "[", "ivecfull", "]"}], "<", " ", "nepidemics"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"draw", " ", "=", " ", 
+      RowBox[{"RandomReal", "[", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{"draw", ">", "0.5"}], ",", " ", 
+       RowBox[{"initinf", " ", "=", " ", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0"}], "}"}]}], ",", " ", 
+       RowBox[{"initinf", " ", "=", " ", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1"}], "}"}]}]}], " ", "]"}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"ivec", " ", "=", " ", 
+      RowBox[{"PoissonSim", "[", 
+       RowBox[{
+       "initinf", ",", " ", "genlength", ",", " ", "epilength", ",", " ", 
+        "changepoint", ",", " ", "NGMHigh", ",", " ", "NGMLow", ",", 
+        "gensperbin"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"Total", "[", 
+         RowBox[{"Flatten", "[", "ivec", "]"}], "]"}], ">", "100"}], ",", " ", 
+       RowBox[{"(*", 
+        RowBox[{
+        "check", " ", "that", " ", "at", " ", "least", " ", "100", " ", 
+         "people", " ", "were", " ", "infected"}], "*)"}], 
+       "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"ivecnoisy", " ", "=", " ", 
+         RowBox[{"ivec", " ", "+", "  ", 
+          RowBox[{"RandomVariate", "[", 
+           RowBox[{
+            RowBox[{"PoissonDistribution", "[", "noiserate", "]"}], ",", " ", 
+            
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"Length", "[", "ivec", "]"}], ",", 
+              RowBox[{"Length", "[", "NGMHigh", "]"}]}], "}"}]}], "]"}]}]}], 
+        ";", "\[IndentingNewLine]", 
+        RowBox[{"ivecfull", " ", "=", " ", 
+         RowBox[{"Join", "[", 
+          RowBox[{"ivecfull", ",", " ", 
+           RowBox[{"{", "ivecnoisy", "}"}]}], "]"}]}]}]}], 
+      "\[IndentingNewLine]", "]"}], ";"}]}], "\[IndentingNewLine]", "]"}], 
+  ";"}]}], "Input",
+ CellChangeTimes->{{3.710421143913138*^9, 3.710421196753495*^9}, {
+   3.710421465595716*^9, 3.710421561776441*^9}, {3.7104215969651537`*^9, 
+   3.71042163537359*^9}, {3.710421697787984*^9, 3.710421740586547*^9}, 
+   3.710421793882148*^9, {3.710422437767041*^9, 3.710422474059128*^9}, {
+   3.7104253268397007`*^9, 3.7104253826637897`*^9}, {3.710425413231593*^9, 
+   3.710425414630662*^9}, {3.710425452118977*^9, 3.7104254823581333`*^9}, {
+   3.710426103149641*^9, 3.7104261055335703`*^9}, {3.710426190829391*^9, 
+   3.710426407816312*^9}, {3.71042727883904*^9, 3.7104274377141533`*^9}, {
+   3.710433345466198*^9, 3.7104333477191067`*^9}, {3.710433386423751*^9, 
+   3.71043343104607*^9}, {3.710433484575164*^9, 3.710433529069639*^9}, {
+   3.7104335634901533`*^9, 3.7104335679693413`*^9}, {3.71043363428841*^9, 
+   3.710433635589696*^9}, {3.710433681091228*^9, 3.7104337390482807`*^9}, {
+   3.710433912909658*^9, 3.710433981463448*^9}, {3.710434246853257*^9, 
+   3.7104342470369797`*^9}, {3.710480526157043*^9, 3.710480529723898*^9}, {
+   3.711129689399518*^9, 3.7111297168999453`*^9}, {3.7111298529656076`*^9, 
+   3.711129923284009*^9}, {3.7111299547425957`*^9, 3.711130075301045*^9}, {
+   3.711130165895232*^9, 3.711130179654726*^9}, {3.74834248711557*^9, 
+   3.748342523429224*^9}, 3.7483426522769537`*^9, {3.748342780179111*^9, 
+   3.7483427814447536`*^9}, {3.748342829030414*^9, 3.748342849736084*^9}, {
+   3.748364646086917*^9, 3.748364668205524*^9}, {3.748364752951212*^9, 
+   3.748364859484398*^9}, {3.7483649182142563`*^9, 3.7483650274869967`*^9}, {
+   3.74836509426754*^9, 3.748365136110634*^9}, {3.7483656914368258`*^9, 
+   3.748365691597739*^9}, {3.748369861384965*^9, 3.748369861499976*^9}, {
+   3.748370133776041*^9, 3.748370133856749*^9}, 3.7489281199535418`*^9, 
+   3.7489282301131887`*^9, {3.748928307920599*^9, 3.748928327719632*^9}, {
+   3.748928378558629*^9, 3.748928411044341*^9}, 3.748928460359311*^9, {
+   3.748928647733158*^9, 3.748928651374092*^9}, {3.7489297240842113`*^9, 
+   3.748929759959776*^9}, 3.749234206940106*^9, {3.749363825007806*^9, 
+   3.7493638250762444`*^9}, 3.749363867763789*^9, {3.749364115769648*^9, 
+   3.749364115834237*^9}, 3.7493653729522047`*^9, 3.7493671585024443`*^9, {
+   3.749369227368019*^9, 3.7493692353229*^9}, {3.749373501775454*^9, 
+   3.7493735043523693`*^9}, 3.74937457983025*^9, {3.7493757834331017`*^9, 
+   3.749375809078966*^9}, {3.749376190200172*^9, 3.7493761961292133`*^9}, 
+   3.7493770470474463`*^9, {3.749385396185795*^9, 3.749385400060646*^9}, {
+   3.751304944401072*^9, 3.751305000927546*^9}, {3.7513050919746227`*^9, 
+   3.7513051027882223`*^9}, {3.75130517136978*^9, 3.751305187026062*^9}, {
+   3.779106185968087*^9, 3.7791062721689796`*^9}, {3.7791063925303793`*^9, 
+   3.7791064447618847`*^9}},
+ CellLabel->"In[26]:=",ExpressionUUID->"b5257ec2-3330-46a7-80e3-6001995fa713"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Grid", "[", 
+  RowBox[{
+   RowBox[{"{", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"Join", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"Style", "[", 
+         RowBox[{
+          RowBox[{"Rotate", "[", 
+           RowBox[{
+           "\"\<Cases, Group \
+\!\(\*StyleBox[\"I\",FontSlant->\"Italic\"]\)\>\"", ",", 
+            RowBox[{"\[Pi]", "/", "2"}]}], "]"}], ",", 
+          RowBox[{"FontSize", "\[Rule]", "20"}], ",", 
+          RowBox[{"FontFamily", "\[Rule]", "\"\<Helvetica\>\""}]}], "]"}], 
+        "}"}], ",", 
+       RowBox[{"Table", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"ListLinePlot", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"ivecfull", "\[LeftDoubleBracket]", 
+            RowBox[{"i", ",", "All", ",", "1"}], "\[RightDoubleBracket]"}], 
+           ",", "\[IndentingNewLine]", 
+           RowBox[{"Frame", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"True", ",", "True", ",", "False", ",", "False"}], 
+             "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameTicks", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{"i", ",", " ", 
+                  RowBox[{"Rotate", "[", 
+                   RowBox[{
+                    RowBox[{"ToString", "[", "i", "]"}], ",", 
+                    RowBox[{"\[Pi]", "/", "2"}]}], "]"}]}], "}"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "0", ",", "25", ",", "5"}], "}"}]}], "]"}],
+               ",", "Automatic"}], "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameLabel", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"\"\<Week\>\"", ",", " ", "None"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotStyle", "\[Rule]", "Black"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"BaseStyle", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"FontSize", "\[Rule]", "18"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotRange", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"0", ",", "100"}], "}"}]}], ",", " ", 
+           RowBox[{"AspectRatio", "\[Rule]", "Full"}]}], 
+          "\[IndentingNewLine]", "]"}], "\[IndentingNewLine]", ",", 
+         RowBox[{"{", 
+          RowBox[{"i", ",", "1", ",", "nepidemics"}], "}"}]}], "]"}]}], "]"}],
+      ",", "\[IndentingNewLine]", 
+     RowBox[{"Join", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"Style", "[", 
+         RowBox[{
+          RowBox[{"Rotate", "[", 
+           RowBox[{
+           "\"\<Cases, Group \
+\!\(\*StyleBox[\"J\",FontSlant->\"Italic\"]\)\>\"", ",", 
+            RowBox[{"\[Pi]", "/", "2"}]}], "]"}], ",", 
+          RowBox[{"FontSize", "\[Rule]", "20"}], ",", 
+          RowBox[{"FontFamily", "\[Rule]", "\"\<Helvetica\>\""}]}], "]"}], 
+        "}"}], ",", 
+       RowBox[{"Table", "[", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"ListLinePlot", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"ivecfull", "\[LeftDoubleBracket]", 
+            RowBox[{"i", ",", "All", ",", "2"}], "\[RightDoubleBracket]"}], 
+           ",", "\[IndentingNewLine]", 
+           RowBox[{"Frame", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"True", ",", "True", ",", "False", ",", "False"}], 
+             "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameTicks", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"Table", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{"i", ",", " ", 
+                  RowBox[{"Rotate", "[", 
+                   RowBox[{
+                    RowBox[{"ToString", "[", "i", "]"}], ",", 
+                    RowBox[{"\[Pi]", "/", "2"}]}], "]"}]}], "}"}], ",", 
+                RowBox[{"{", 
+                 RowBox[{"i", ",", "0", ",", "25", ",", "5"}], "}"}]}], "]"}],
+               ",", "Automatic"}], "}"}]}], ",", "\[IndentingNewLine]", 
+           RowBox[{"FrameLabel", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"\"\<Week\>\"", ",", " ", "None"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotStyle", "\[Rule]", "Black"}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"BaseStyle", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"FontSize", "\[Rule]", "18"}], "}"}]}], ",", 
+           "\[IndentingNewLine]", 
+           RowBox[{"PlotRange", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"0", ",", "100"}], "}"}]}], ",", " ", 
+           RowBox[{"AspectRatio", "\[Rule]", "Full"}]}], 
+          "\[IndentingNewLine]", "]"}], ",", 
+         RowBox[{"{", 
+          RowBox[{"i", ",", "1", ",", "nepidemics"}], "}"}]}], "]"}]}], 
+      "]"}]}], "\[IndentingNewLine]", "}"}], ",", 
+   RowBox[{"Dividers", "\[Rule]", "All"}], ",", 
+   RowBox[{"Spacings", "\[Rule]", "1"}], ",", " ", 
+   RowBox[{"ItemSize", "\[Rule]", "Full"}]}], "]"}]], "Input",
+ CellLabel->"In[32]:=",ExpressionUUID->"8cb3a2ce-b4f3-4514-934c-b178d5547fee"],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     StyleBox[
+      RotationBox["\<\"Cases, Group \\!\\(\\*StyleBox[\\\"I\\\",FontSlant->\\\
+\"Italic\\\"]\\)\"\>",
+       BoxRotation->1.5707963267948966`],
+      StripOnInput->False,
+      FontFamily->"Helvetica",
+      FontSize->20], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          
+          StyleBox[{
+            LineBox[{{1., 7.}, {2., 18.}, {3., 37.}, {4., 88.}, {4.5, 100.}}],
+             LineBox[CompressedData["
+1:eJxTTMoPSmViYGAQBWIQDQFiDhA6EkpLQOkwKC0DpV2gtAKUtobSSlDaDEqr
+QGlDKK2GRmugqdNCs1cHja+Hpt8Ahz0wdUZo7jJGU2eC5g9TNHfB/AGzxxzN
+PRZo9lvC9QMA7X0TiA==
+             "]]},
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0mgNUAEobQWkOKK0CpQWgtCWUFoHQDQ5Q
+vgSUNoXSMlDaHEoroJmnBKU10MT1HFDdpYWmTgdNXAFNHGYvzByYPgM0ew3R
+9MP8DTPXGM08EzT9MH/CzDdDczfM3zD9FmjqYeGo4AAA9QAXTA==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          
+          StyleBox[{
+            LineBox[{{1., 10.}, {2., 13.}, {3., 44.}, {4., 88.}, {
+             4.266666666666667, 100.}}], LineBox[CompressedData["
+1:eJxTTMoPSmViYGAQBWIQLXO8EIjEHBjAIBJKS0DoA8FQvgyEbnCE8hWgtDmU
+VoLSGlBaBY2vhkNcB0proZmjg8bXQzPHAEobotEweSM0+4zR5E3Q5E3R+GZQ
+Gt2f0HBgsIDS0HBisISbDwDJABdL
+             "]]},
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0kgNUAEprQWkOKG0IpQWgtDWUFoHSzlBa
+AkI3OED5MlDaDkoroPFh9upBaRUorYZGa+CgYe6EmauDw1wDNBqmD+YvmL1G
+aHxjKA31F4MJmn2mUBoWDmZo7jNH84cFmvss4XwAJVcXeA==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0lgNUAEpbQmkOKG0LpQUgdIMnlC8Cpf2h
+tARU3gfKl4HynaF8BSjtAKWVoLQelFZxQHWPGpS2gNIaaHx0dTo4zIW6g8EA
+1Z0Mhmj6jNDcYYxmjgmaeaZo9puhyZvj8AfMflg4KzkAAOPqGOI=
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}]},
+    {
+     StyleBox[
+      RotationBox["\<\"Cases, Group \\!\\(\\*StyleBox[\\\"J\\\",FontSlant->\\\
+\"Italic\\\"]\\)\"\>",
+       BoxRotation->1.5707963267948966`],
+      StripOnInput->False,
+      FontFamily->"Helvetica",
+      FontSize->20], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0igNUAEprQGkOKG0HpQUgdIMzlC8CpQOh
+tASUdoLSMlDaAUorQGkzKK0EpY0cUN1hCqXV0PTB3AV1B4MWGq0DpQ2htB6a
+uQZo7oapg+mHuQNmjzGaP0zQ+KZofJi/YPaZo/nDAkorQWlLuH0AW3EXlQ==
+
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0igNUAEorQWkOKG0MpQXQ+CJofAkobQOl
+ZaC0KZRWgNIGaPbA1Kmg8dWgtBaU1kAzRwtNnQ6aOXpo5sHshZljiGaeEZp5
+xmh8EzQ+zF8wd5ihmW+OZr4FlIaFoyXcnQAq8hat
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0lgNUAErrQGkOKG0EpQWgtCuUFoHSgVBa
+Akp7Q2kZKG0GpRWgtAGUVoLSGlBaBUqrodEyaOpg9sDcDTNPB01cD4c6mHmG
+aO5A96cxmrtN0MwzRXM3uj/N0dxrgeYPS7h7AJWYFug=
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0kgNUAEqrQGkOKK0BpQWgtCGUFoHSplBa
+AkqbQGkZKG0OpRXQ5GH2qqDRBlBaDUproblDBU0cpl4HTV4PzR0wdTB3GKKp
+N0Kz1xjNnTB3w+yB+RvmLjM0d8H8DTPfAkrDws0SLg8APMQWxg==
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}], 
+     GraphicsBox[{{}, {{{}, {}, 
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[LineBox[CompressedData["
+1:eJxTTMoPSmViYGCQBGIQDQEf7CG0jgNUAEqrQGkOKG0GpQWgtDmUFoHQDc5Q
+vgSUdoDSMlDaEkorQGkTKK3kgGo/zF4tKK0GpY2gtAYaXwtNXAeN1kPjG6DZ
+Y4jmTpi5UH8xGKOZD3M3zF5TNH+YocnDwgkWbhZQGhZOsHDRcQAAPXcXiA==
+
+            "]],
+           FontSize->18]}}, 
+        {GrayLevel[0], PointSize[
+          NCache[
+           Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+         
+         StyleBox[{},
+          FontSize->18]}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}, {
+         {GrayLevel[0], PointSize[
+           NCache[
+            Rational[7, 360], 0.019444444444444445`]], AbsoluteThickness[1.6], 
+          StyleBox[{},
+           FontSize->18]}, {}}}, {{}, {}}},
+      AspectRatio->Full,
+      Axes->{True, True},
+      AxesLabel->{None, None},
+      AxesOrigin->{0., 0},
+      BaseStyle->{FontSize -> 18},
+      DisplayFunction->Identity,
+      Frame->{{True, False}, {True, False}},
+      FrameLabel->{{None, None}, {
+         FormBox["\"Week\"", TraditionalForm], None}},
+      FrameTicks->{{Automatic, Automatic}, {{{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}, {{0, 
+           FormBox[
+            RotationBox["\"0\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {5, 
+           FormBox[
+            RotationBox["\"5\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {10, 
+           FormBox[
+            RotationBox["\"10\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {15, 
+           FormBox[
+            RotationBox["\"15\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {20, 
+           FormBox[
+            RotationBox["\"20\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}, {25, 
+           FormBox[
+            RotationBox["\"25\"", BoxRotation -> 1.5707963267948966`], 
+            TraditionalForm]}}}},
+      GridLines->{None, None},
+      GridLinesStyle->Directive[
+        GrayLevel[0.5, 0.4]],
+      Method->{
+       "OptimizePlotMarkers" -> True, 
+        "CoordinatesToolOptions" -> {"DisplayFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& ), "CopiedValueFunction" -> ({
+            (Identity[#]& )[
+             Part[#, 1]], 
+            (Identity[#]& )[
+             Part[#, 2]]}& )}},
+      PlotRange->{{0., 25.}, {0, 100}},
+      PlotRangeClipping->True,
+      PlotRangePadding->{{
+         Scaled[0.02], 
+         Scaled[0.02]}, {0, 0}},
+      Ticks->{Automatic, Automatic}]}
+   },
+   AutoDelete->False,
+   GridBoxDividers->{"Columns" -> {{True}}, "Rows" -> {{True}}},
+   GridBoxItemSize->{"Columns" -> {{All}}, "Rows" -> {{All}}},
+   GridBoxSpacings->{"Columns" -> {{1}}}],
+  "Grid"]], "Output",
+ CellChangeTimes->{3.779106468410392*^9},
+ CellLabel->"Out[32]=",ExpressionUUID->"96cbd5e4-7cc8-45cf-a433-f90e786a23cf"]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{1001, 1035},
+WindowMargins->{{Automatic, 292}, {Automatic, 0}},
+FrontEndVersion->"12.0 for Mac OS X x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 163, 3, 98, "Title",ExpressionUUID->"77133319-6da8-402e-87c0-bad92763c49a"],
+Cell[746, 27, 1157, 23, 311, "Text",ExpressionUUID->"32fe3d9f-a3f3-4a1b-99cf-f7884f0b8a56"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[1940, 55, 319, 5, 98, "Title",ExpressionUUID->"c098a78a-3d61-4c3c-8437-c6a22a8119ce"],
+Cell[2262, 62, 1081, 24, 196, "Text",ExpressionUUID->"b3f27822-9e11-4663-a273-f99ad9037459"],
+Cell[3346, 88, 14827, 361, 1104, "Input",ExpressionUUID->"76e30102-0d0e-42c5-a609-2640695cf014"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[18210, 454, 161, 3, 98, "Title",ExpressionUUID->"8d49634b-2f5e-483c-aaca-094e1d2a0f36"],
+Cell[18374, 459, 276, 6, 35, "Text",ExpressionUUID->"b0d9014e-12c0-4ddf-b4e0-c26fe007a3a2"],
+Cell[18653, 467, 13575, 335, 842, "Input",ExpressionUUID->"0e55b690-6acf-4c30-9655-3ceced8141e2"],
+Cell[32231, 804, 158, 3, 35, "Text",ExpressionUUID->"1ad5e5d0-e944-4fe6-8be8-bed9014c9881"],
+Cell[CellGroupData[{
+Cell[32414, 811, 5158, 120, 493, "Input",ExpressionUUID->"ca1a963b-b505-4cad-844e-a388cd4ca66a"],
+Cell[37575, 933, 36701, 946, 467, "Output",ExpressionUUID->"2742f159-1aed-4674-90e1-44ddf547619a"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[74325, 1885, 271, 4, 98, "Title",ExpressionUUID->"f88943a5-45a8-4aba-adaf-100b2da5ddb1"],
+Cell[74599, 1891, 865, 17, 219, "Text",ExpressionUUID->"64cd279b-c1c6-4a45-8a01-930de3adfd80"],
+Cell[75467, 1910, 741, 18, 52, "Input",ExpressionUUID->"cbe946ab-849e-4be9-b392-6ac31ff0be72"],
+Cell[76211, 1930, 3724, 85, 346, "Input",ExpressionUUID->"f2c18685-a952-4c02-a2ef-393d6647889f"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[79972, 2020, 164, 3, 98, "Title",ExpressionUUID->"ed3480cd-a145-4ff2-a865-678b4c773135"],
+Cell[80139, 2025, 8420, 190, 472, "Input",ExpressionUUID->"b5257ec2-3330-46a7-80e3-6001995fa713"],
+Cell[CellGroupData[{
+Cell[88584, 2219, 5188, 120, 493, "Input",ExpressionUUID->"8cb3a2ce-b4f3-4514-934c-b178d5547fee"],
+Cell[93775, 2341, 36860, 953, 501, "Output",ExpressionUUID->"96cbd5e4-7cc8-45cf-a433-f90e786a23cf"]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
