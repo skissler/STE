@@ -15,4 +15,5 @@ Code for simulating the SIR-type and Poisson-type epidemics described in the mai
 #### Figures.nb: 
 Code for generating the figures from the main text 
 
-The code files contain references to data that are included in the '/data' folder of this project. 
+#### pairwiseTEs2009.csv
+A .csv file containing the pairwise STE values for the autumn 2009 outbreak, used in Figures.nb
